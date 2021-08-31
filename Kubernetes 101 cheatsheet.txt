@@ -1,0 +1,14 @@
+Sección Kubernetes 101
+
+    Kubectl es la herramienta en linea de comandos para controlar los clusters de Kubernetes
+    Su gramatica común es -> Kubectl comando recurso nombre argumentos
+        Comando: verbo, como crear, borrar, editar...
+        Recurso: es el tipo de objeto o recurso sobre el que queremos que se accione, pueden ser nodos, pods, servicios, deployments...
+        Nombre: el nombre del recurso.
+        Argumentos: pueden ser variados.
+    
+    Comandos básicos:
+    Obtener la lista de nodos de nuestro cluster
+        Kubectl get nodes (Opcional añadir nombre y obtener unicamente ese)
+        Kubectl get nodes -o wide (Respuesta mas completa)
+        Kubectl get nodes -o json (Respuesta mas completa en forma de JSON)
