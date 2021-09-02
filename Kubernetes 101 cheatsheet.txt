@@ -12,3 +12,36 @@ Sección Kubernetes 101
         Kubectl get nodes (Opcional añadir nombre y obtener unicamente ese)
         Kubectl get nodes -o wide (Respuesta mas completa)
         Kubectl get nodes -o json (Respuesta mas completa en forma de JSON)
+
+    Manifest
+    ¿Qué es?
+    Es un fichero en formato JSON o YAML que utilizamos para definir los objetos que creamos en nuestro cluster y trackear sus cambios, podemos almacenarlo como una version de fichero y así escalarlo (GIT), se puede trabajar sin estos ficheros pero es mas laborioso. Su estructura es:
+        apiversion: para saber que version estamos atacando
+        kind: tipo de objeto que vamos a trabajar
+        metadatos: con claves y subclaves
+        spec: definimos el objeto, imagen, replica, etc... Varia dependiendo del objeto que saber
+    Para crear un objeto podemos hacerlo en una estructura como esta:
+        apiVersion: apps/v1 
+        kind: Deployment
+        metadata:
+        name: nginx-deployment
+        spec:
+        selector:
+            matchLabels:
+            app: nginx
+        replicas: 1
+        template:
+            metadata:
+            labels:
+                app: nginx
+            spec:
+            containers:
+            - name: nginx
+                image: nginx:latest
+                ports:
+            - containerPort: 80
+    Su comando equivalente sería
+        kubectl run nginx --image=nginx:latest --port 80 --replicas=1
+    Para borrar ambos sería, en primer y segundo caso:
+        kubectl delete -f ejemplo.yaml
+        kubectl delete deployment nginx
