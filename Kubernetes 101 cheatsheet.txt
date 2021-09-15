@@ -16,10 +16,10 @@ Sección Kubernetes 101
     Manifest
     ¿Qué es?
     Es un fichero en formato JSON o YAML que utilizamos para definir los objetos que creamos en nuestro cluster y trackear sus cambios, podemos almacenarlo como una version de fichero y así escalarlo (GIT), se puede trabajar sin estos ficheros pero es mas laborioso. Su estructura es:
-        apiversion: para saber que version estamos atacando
-        kind: tipo de objeto que vamos a trabajar
-        metadatos: con claves y subclaves
-        spec: definimos el objeto, imagen, replica, etc... Varia dependiendo del objeto que saber
+        apiversion: para saber que version estamos atacando.
+        kind: tipo de objeto que vamos a trabajar.
+        metadatos: con claves y subclaves.
+        spec: definimos el objeto, imagen, replica, etc... Varia dependiendo del objeto que saber.
     Para crear un objeto podemos hacerlo en una estructura como esta:
         apiVersion: apps/v1 
         kind: Deployment
@@ -45,3 +45,95 @@ Sección Kubernetes 101
     Para borrar ambos sería, en primer y segundo caso:
         kubectl delete -f ejemplo.yaml
         kubectl delete deployment nginx
+
+    Pods:
+    ¿Qué es?
+    Es el objeto minimo que se despliega en Kubernetes, no así el contenedor, el pod siempre incluye al menos un contenedor. Un pod se inicia y es un contenedor con un proceso corriendo en primer plano, por lo general el comando que especificamos en la imagen. Si el pod muere el scheduler manda levantar otro.
+    Los eventos de un pod muestran lo que ha ocurrido durante su lanzamiento.
+    Para levantar un pod desde un Manifest
+        kubectl apply -f pod1.yaml  
+    Para obtener la descripción de ese pod
+        kubectl describe pod nginx
+    Para borrar ambos sería, en primer y segundo caso:
+        kubectl delete pod nginx
+        kubectl delete -f pod1.yaml
+
+    Metadatos, labels y selectors (De pods)
+    Tipos de metadatos:
+        Hay nombre, etiquetas (labels), se describen como cualquier otra caracteristica del .yaml
+        Selectors: permiten obtener info o referirnos a un objeto a traves de sus etiquetas para poder filtrar.
+        Por ejemplo al desplegar un balanceador de carga, le indicamos a que pods tiene que hacer referencia según una serie de selectores.
+        Para obtener un pod con una etiqueta concreta
+            kubectl get pods --selector project=nginx
+        Para obtener los pods que contengan esa etiqueta
+            kubectl get pods -l nginx
+        
+    Replicas o pods gestionados
+    ¿Qué es un replication controller?
+    Es un recurso que nos permite lanzar pods de manera organizada, copias, para por ejemplo si hay alguna copia ocupada, se encarga otra
+    Replication controller está obsoleto, ahora se trabaja con Replica sets
+    El ejemplo de un replication controller es:
+        apiVersion: v1
+        kind: ReplicationController
+        metadata:
+        name: nginx-testing
+        spec:
+        replicas: 3
+        selector:
+            project: nginx
+            environment: testing
+        template:
+            metadata:
+            name: nginx
+            labels:
+                project: nginx
+                environment: testing
+            spec:
+            containers:
+            - name: nginx
+                image: nginx
+                ports:
+                - containerPort: 80
+    Para ver todas las replicas y el padre 
+        kubectl get all // kubectl get replicationcontroller
+    Para subir el numero de replicas
+        Editas el fichero y lo escalas
+        kubectl scale replicationcontroller nginx-testing --replicas=3
+    Para describirlo y ver sus eventos, esto es interesante ves su tracking
+        kubectl describe rc nginx
+    Para eliminarlos a todos
+        kubectl delete -f pod-replicationcontroller.yaml 
+    Para eliminar el replicationcontroller pero no sus pods creados
+        kubectl delete rc nginx-testing --cascade=false
+        
+    Replicas con ReplicaSets
+    Es la forma mas actual de gestionar las replicas
+    La estructura de un ReplicaSet es:
+        apiVersion: apps/v1
+        kind: ReplicaSet
+        metadata:
+        name: nginx-testing
+        spec:
+        replicas: 5
+        selector:
+            matchLabels:
+            app: nginx
+            environment: testing
+        template:
+            metadata:
+            labels:
+                app: nginx
+                environment: testing
+            spec:
+            containers:
+            - name: nginx
+                image: nginx
+                ports:
+            - containerPort: 80
+    Introduce una nueva forma de trabajar con selectores, mas avanzada que con replicationcontroller.
+    Además en el selector podemos añadir esta serie de caracteristicas:
+        matchExpressions:
+        - {key: environment, operator: In, values: [testing]}
+        No lo hemos utilizado pero lo debemos tener en cuenta
+
+    Servicios
