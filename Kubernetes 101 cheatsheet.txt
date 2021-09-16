@@ -137,3 +137,60 @@ Sección Kubernetes 101
         No lo hemos utilizado pero lo debemos tener en cuenta
 
     Servicios
+    ¿Qué es?
+    Cada pod obtiene su IP diferente, los pods pueden escalar, y vamos a necesitar que se haga un balanceo de carga que vaya enviando a los pods el tráfico. Para esto necesitamos que algun elemento de red se ponga entre el servicio final y el pod, para esto se usan los SERVICIOS, una abstraccion que define un conjunto de pods y su politica.
+    El servicio consta de un DNS y una IP, los servicios son encontrables dentro del cluster sin saber su IP.
+    Los principio o caracteristicas de los servicios se definen de esta manera:
+        apiVersion: v1
+        kind: Service
+        metadata:
+            name: servicio1
+        spec:
+        selector:
+            app: nginx
+            environment: testing
+        ports:
+            - protocol: TCP
+            port: 80
+    Existen diferentes tipos de servicio pueden ser ClusterIP, NodePort, LoadBalancer o ExternalName
+    - ClusterIP: lo usamos para exponer un servicio en una IP interna de nuestro cluster, ese servicio es accesible solo dentro del cluster, es util para cuando tenemos muchos microservicios.
+    - NodePort: lo usamos cuando exponemos un servicio en la IP principal en los nodos del cluster, desde cualquier nodo podemos llegar al servicio, facilita el balance de trafico desde fuera.
+    - LoadBalancer: exponemos un servicio externamente usando un balanceador de carga de un proveedor de cloud, de esta forma tenemos un acceso interno, externo y a un nodo.
+    - ExternalName: cuando recibe una petición devuelve el valor de un DNS tipo CNAME, se usa para cambiar a donde apunta un recurso sin necesidad de cambiar el DNS.
+
+    Servicios: ClusterIP
+    Lo usamos para exponer un conjunto de pods para que se pueda llegar a ellos en conjunto desde dentro del cluster. Por ejemplo, tenemos 5 pods replicados, y queremos que un servicio balancee las peticiones, lo que diferencia al ClusterIP del resto de servicios es que solo accesible desde dentro.
+    El selector del servicio busca las etiquetas de los pods para saber dónde enviar el tráfico. Podemos añadir etiquetas a nuestro servicio.
+    Desde dentro un nodo o un pod si que podemos acceder, hacer un curl, pero desde fuera no, hacemos un exec -it bash o un minikube ssh y consultamos.
+    Para describir un servicio 
+        kubectl describe service servicio-clusterip
+    Para borrar un servicio
+        kubectl delete service -f servicio-clusterip
+    Para borrar todos los recursos del sitio en el que estoy
+        kubectl delete -f .
+
+    Servicios: NodePort
+    Es la misma estructura vista anteriormente, tiene un puerto externo, quiere decir que se crea un puerto efimero o de cliente, se puede acceder como el anterior, con minikube ssh.
+    Tenemos que acceder al nodo para consultar, es decir, ahora que estamos en local con un solo nodo, montado con minikube, ejecutaremos el comando minkube IP y lo tendremos. Consultado a la IP del nodo con el puerto que ha definido el servicio el trafico ya se redirige, sin entrar al pod directamente.
+    minikube ip -> curl 192.168.99.104:32230
+    Este puerto es extraño, así que con un proxy externo todo el trafico podrá ser redirigido del domnio al puerto especifico. Si lo borramos y levantamos la IP cambia así quie tenemos que definir un puerto fijo de esta forma:
+        apiVersion: v1
+        kind: Service
+        metadata:
+        name: servicio-nodeport
+        spec:
+        type: NodePort
+        selector:
+            app: nginx
+            environment: testing-nodeport
+        ports:
+            - protocol: TCP
+            port: 80
+            nodePort: 32000
+    Esto nos sirve para por ejemplo desde el balanceador de carga del cloud apunta a los nodos de nuestro cluster que envia el trafico al puerto especifico. El LoadBalancer facilita todo esto.
+
+    Servicios: LoadBalancer
+    No se pueden probar usando minikube porque necesitamos mas de un cluster, se verá en la seccion de 102.
+
+    Servicios: ExternalName
+    Nos permiten crear un alias DNS que se aplica dentro del cluster, se usa mucho para migraciones.
