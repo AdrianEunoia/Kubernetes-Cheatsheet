@@ -194,3 +194,116 @@ Sección Kubernetes 101
 
     Servicios: ExternalName
     Nos permiten crear un alias DNS que se aplica dentro del cluster, se usa mucho para migraciones.
+
+    Volumenes:
+    Cómo sabemos el almacenamiento en los contenedores es efimero, por lo que docker implementa un sistema de persistencia a partir de volumenes. Esto tambien nos permite compartir contenido entre diferentes pods, donde habrán ficheros comunes. Existen diferentes tipos de volumenes, directorio en nodos, en cloud (EBS) o cluster EFS.
+    - Volumenes asociados a un contenedor: al levantar un contenedor se crea un volumen, que guarda la diferencia entre la imagen real y las modificaciones que se hagan, al morir el contenedor se pierde el volumen, por lo tanto los datos.
+    - Persistent volumes.
+
+    Volumenes: Persistent volume:
+    Si hay varios clusters, la ubicacion de montage debe estar compartida.
+    Para obtener los Persistent volumes activos y sus claims
+        kubectl get persistentvolumes
+        kubectl get pvc
+    Creamos un volumen 
+        kubectl apply -f pv-volume-001.yaml 
+    ¿Cómo le indicamos al volumen que va a ser de alguien? -> Con el fichero claim.yaml. Es importante que se defina bien el volumen e igual el claim
+        kubectl apply -f claim.yaml
+    El estado del PV cambiará de pending a bound, porque ya está siendo ligado
+    Describimos el claim para ver sus detalles
+        kubectl describe pvc pv-volume-claim-1
+    Un ejemplo de pod en el que se relaciona el volumen, su claim y montage es:
+        kind: Pod
+        apiVersion: v1
+        metadata:
+        name: pv-pod
+        spec:
+        volumes:
+            - name: pv-storage
+            persistentVolumeClaim:
+            claimName: pv-volume-claim-1
+        containers:
+            - name: pv-container
+            image: nginx:1.7.9
+            ports:
+                - containerPort: 80
+            volumeMounts:
+                - mountPath: "/usr/share/nginx/html"
+                name: pv-storage
+    Para un sistema basado en replicas es exactamente igual, y los pods accederan a ese directorio, y será compartido.
+    IMPORTANTE!
+    El punto de montage de los Persistent Volumes está en minikube, es decir, la ruta /mnt/data/pv-loquesea será accesible desde minikube, desde cada cluster si fueran más, en nuestro caso volvemos a entrar con minikube ssh.
+    Un volumen no se puede borrar si está siendo claimeado
+
+    ConfigMaps:
+    Son elementos que nos permiten desacoplar configuración de nuestros contenedores con algo dentro que sirven para un fin. Son valores de configuración que pasamos a los contenedores en el momento de su creacion, pueden ser variables, directorios o ficheros.
+    No son recomendables para insertar codigo, están mas pensado para configuraciones simples del sistema.
+    Para obtener los ConfigMaps de nuestro sistema
+        kubectl get cm
+    (1) Para crear un ConfigMaps desde la linea de comando que contenga una variable
+        kubectl create configmap test-cm --from-literal variable1=valor1
+    Para obtenerlos y su descripcion
+        kubectl get cm -o yaml
+    Para describirlos
+        kubectl describe cm test-cm
+    Para simular un manifest (yaml)
+        kubectl create configmap test-cm --from-literal variable1=valor1 --from-literal varible2=valor2 --dry-run -o yaml
+    Para crear un pod e insertarle ConfigMaps mediante ficheros
+        Primero creamos los configmaps, ejemplo:
+        server {
+            listen       80;
+            server_name  videocursoscloud.com;
+
+            location / {
+                root   /usr/share/nginx/html;
+                index  index.html index.htm;
+            }
+        }
+        Despues se lo pasamos en el manifest del pod, ejemplo
+        apiVersion: v1 
+        kind: Pod 
+        metadata:
+        name: nginx-cm-file 
+        spec:
+        containers:
+            - name: nginx
+            image: nginx
+            volumeMounts:
+            - name: config-volume
+                mountPath: /etc/nginx/conf.d/
+        volumes:
+            - name: config-volume
+            configMap:
+                name: nginx-config-dir (Directorio con los ficheros de configuración)
+    
+    Secrets:
+    ¿Qué es?
+    Son similares a los configmaps a diferencia de ellos que van cifrados en el servidor, los usamos preferentemente para almacenar usuarios, claves, SSH, para que posteriormente los usuarios puedan acceder a ellos.
+    Hay difentes tipos de Secrets:
+    Para crear un secret y guardarlo a partir de un fichero:
+        kubectl create secret generic credenciales --from-file=./username --from-file=./password
+    Para obtener todos los secrets almacenados:
+        kubectl get secrets
+    Para obtener la definición en forma de YAML: (El yaml muestra los credenciales no cifrados pero en B64)
+        kubectl create secret generic credenciales --from-file=./username --from-file=./password --dry-run -o yaml
+    Para aplicarlo, una vez ya está creado
+        kubectl apply -f credenciales.yaml
+    Para ver su contenido
+        kubectl get secret credenciales-manifest -o yaml
+    La forma de operar con los secrets es igual que con los ConfigMaps, es decir, montamos en el contenedor (volumen) del pod el secret, la manera de indicarselo es la que se muestra a continuación, podemos hacer la prueba entrando al pod corriendo y comprobar las credenciales:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+        name: nginx-secrets-mount
+        spec:
+        containers:
+        - name: nginx
+            image: nginx:1.7.9
+            volumeMounts:
+            - name: secrets
+            mountPath: "/etc/secrets"
+            readOnly: true
+        volumes:
+        - name: secrets
+            secret:
+            secretName: credenciales-manifest
