@@ -252,7 +252,7 @@ Sección Kubernetes 101
         Primero creamos los configmaps, ejemplo:
         server {
             listen       80;
-            server_name  videocursoscloud.com;
+            server_name  localhost;
 
             location / {
                 root   /usr/share/nginx/html;
