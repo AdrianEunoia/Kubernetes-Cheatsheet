@@ -6,7 +6,7 @@ Sección Kubernetes 101
         Recurso: es el tipo de objeto o recurso sobre el que queremos que se accione, pueden ser nodos, pods, servicios, deployments...
         Nombre: el nombre del recurso.
         Argumentos: pueden ser variados.
-    
+      
     Comandos básicos:
     Obtener la lista de nodos de nuestro cluster
         Kubectl get nodes (Opcional añadir nombre y obtener unicamente ese)
